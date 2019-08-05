@@ -1,8 +1,8 @@
 package ru.geekbrains.android.level2.valeryvpetrov.ui;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
-import android.inputmethodservice.InputMethodService;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -41,6 +41,7 @@ import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosJso
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
+import ru.geekbrains.android.level2.valeryvpetrov.service.RoverInfoService;
 
 public class MainActivity
         extends AppCompatActivity
@@ -61,6 +62,7 @@ public class MainActivity
     private DialogFragment roverSettingsDialogFragment;
 
     private Rover roverPreferences;
+    private int latestSol;  // assigns via RoverInfoService
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,10 +78,12 @@ public class MainActivity
 
         roverPreferences = loadRoverFromPreferences();  // load chosen rover from SP
         if (roverPreferences != null) {
+            startRoverInfoService();
             showRoverInfo(roverPreferences);
         } else {
             showRoverSettingsDialog();
         }
+        handleLaunchIntent(getIntent());
     }
 
     private void initUI() {
@@ -90,6 +94,21 @@ public class MainActivity
         photoList = new ArrayList<>();
         adapterPhotos = new PhotoAdapter(photoList);
         recyclerViewPhotos.setAdapter(adapterPhotos);
+    }
+
+    private void startRoverInfoService() {
+        if (roverPreferences != null) {
+            Intent roverInfoServiceIntent = new Intent(this, RoverInfoService.class);
+            roverInfoServiceIntent.putExtra(RoverInfoService.EXTRA_ROVER_NAME, roverPreferences.name);
+            RoverInfoService.enqueueWork(this, roverInfoServiceIntent);
+        }
+    }
+
+    private void handleLaunchIntent(@Nullable Intent intent) {
+        if (intent != null) {
+            // -1 means that activity launch intent came not from RoverInfoService
+            latestSol = intent.getIntExtra(RoverInfoService.EXTRA_LATEST_SOL, -1);
+        }
     }
 
     private void configureActionBar() {
@@ -109,6 +128,10 @@ public class MainActivity
         searchViewPhotos.setQueryHint(getString(R.string.search_view_hint_sol));
         searchViewPhotos.setOnQueryTextListener(this);
 
+        if (latestSol != -1) {  // start activity form notification
+            // called here because SearchView just initialized
+            searchViewPhotos.setQuery(String.valueOf(latestSol), true);
+        }
         return super.onCreateOptionsMenu(menu);
     }
 
