@@ -52,6 +52,8 @@ public class RoverSettingsDialogFragment
     private List<Rover> roverList;                  // list of all available rovers
     private Rover chosenRover;              // rover user want ot observe
 
+    private String chosenRoverName;             // previously chosen rover name
+
     private RadioGroup radioGroupRoverNames;
     private GifImageView viewProgressRoverNames;
 
@@ -59,6 +61,13 @@ public class RoverSettingsDialogFragment
                                 NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser) {
         this.nasaMarsPhotosAPI = nasaMarsPhotosAPI;
         this.nasaMarsPhotosJsonParser = nasaMarsPhotosJsonParser;
+    }
+
+    RoverSettingsDialogFragment(NASAMarsPhotosAPI nasaMarsPhotosAPI,
+                                NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser,
+                                String chosenRoverName) {
+        this(nasaMarsPhotosAPI, nasaMarsPhotosJsonParser);
+        this.chosenRoverName = chosenRoverName;
     }
 
     @Override
@@ -107,7 +116,7 @@ public class RoverSettingsDialogFragment
     @Override
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
         handlerUI.post(() -> {
-            Toast.makeText(getContext(),
+            Toast.makeText(getActivity(),
                     getString(R.string.error_network_failure),
                     Toast.LENGTH_LONG).show();
             listener.onCancelClick();
@@ -128,10 +137,18 @@ public class RoverSettingsDialogFragment
     }
 
     private void inflateRoverNames(List<Rover> roverList) {
+        RadioButton radioButtonRoverNameChecked = null;
         for (Rover rover : roverList) {
             RadioButton radioButtonRoverName = new RadioButton(getContext());
             radioButtonRoverName.setText(rover.name);
+            if (chosenRoverName != null && chosenRoverName.equals(rover.name)) {
+                radioButtonRoverNameChecked = radioButtonRoverName;
+            }
             radioGroupRoverNames.addView(radioButtonRoverName);
+        }
+
+        if (radioButtonRoverNameChecked != null) {
+            radioButtonRoverNameChecked.setChecked(true);
         }
     }
 }

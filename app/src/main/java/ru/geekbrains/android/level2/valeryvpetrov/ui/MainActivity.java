@@ -1,5 +1,8 @@
 package ru.geekbrains.android.level2.valeryvpetrov.ui;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.inputmethodservice.InputMethodService;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,10 +11,12 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
@@ -22,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +45,8 @@ import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 public class MainActivity
         extends AppCompatActivity
         implements SearchView.OnQueryTextListener, RoverSettingsDialogFragment.RoverSettingsDialogListener {
+
+    private static final String SHARED_PREFERENCES_NAME = "ChosenRoverSP";
 
     private Handler handlerUI;
 
@@ -66,6 +74,7 @@ public class MainActivity
         initUI();
         configureActionBar();
 
+        roverPreferences = loadRoverFromPreferences();  // load chosen rover from SP
         if (roverPreferences != null) {
             showRoverInfo(roverPreferences);
         } else {
@@ -162,12 +171,74 @@ public class MainActivity
     @Override
     public void onSaveClick(Rover chosenRover) {
         roverPreferences = chosenRover;
+        savePreferences(chosenRover);
         showRoverInfo(chosenRover);
+        resetPhotoSearchResult();
+    }
+
+    private void resetPhotoSearchResult() {
+        adapterPhotos.clearPhotoList();
+        searchViewPhotos.setQuery("", false);
+        searchViewPhotos.requestFocus();
+        InputMethodManager inputMethodManager =
+                ((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE));
+        if (inputMethodManager != null)
+            inputMethodManager
+                    .toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);
     }
 
     @Override
     public void onCancelClick() {
         roverSettingsDialogFragment.getDialog().cancel();
+    }
+
+    @Nullable
+    private Rover loadRoverFromPreferences() {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
+        return getRover(sharedPreferences);
+    }
+
+    private void savePreferences(Rover chosenRover) {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
+
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        putRover(chosenRover, editor);
+        editor.apply();
+    }
+
+    private void putRover(Rover rover, SharedPreferences.Editor editor) {
+        editor.putInt(Rover.SERIALIZED_NAME_FILED_ID, rover.id);
+        editor.putString(Rover.SERIALIZED_NAME_FILED_NAME, rover.name);
+        editor.putString(Rover.SERIALIZED_NAME_FILED_LANDING_DATE, TypeConverter.dateToString(rover.landingDate));
+        editor.putString(Rover.SERIALIZED_NAME_FILED_LAUNCH_DATE, TypeConverter.dateToString(rover.launchDate));
+        editor.putString(Rover.SERIALIZED_NAME_FILED_STATUS, rover.status);
+        editor.putInt(Rover.SERIALIZED_NAME_FILED_MAX_SOL, rover.maxSol);
+        editor.putString(Rover.SERIALIZED_NAME_FILED_MAX_DATE, TypeConverter.dateToString(rover.maxDate));
+        editor.putInt(Rover.SERIALIZED_NAME_FILED_TOTAL_PHOTOS, rover.totalPhotos);
+    }
+
+    @Nullable
+    private Rover getRover(SharedPreferences sharedPreferences) {
+        Rover rover = new Rover();
+
+        rover.id = sharedPreferences.getInt(Rover.SERIALIZED_NAME_FILED_ID, -1);
+        if (rover.id != -1) {
+            try {
+                rover.name = sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_NAME, null);
+                rover.landingDate = TypeConverter.stringToDate(sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_LANDING_DATE, null));
+                rover.launchDate = TypeConverter.stringToDate(sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_LAUNCH_DATE, null));
+                rover.status = sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_STATUS, null);
+                rover.maxSol = sharedPreferences.getInt(Rover.SERIALIZED_NAME_FILED_MAX_SOL, -1);
+                rover.maxDate = TypeConverter.stringToDate(sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_MAX_DATE, null));
+                rover.totalPhotos = sharedPreferences.getInt(Rover.SERIALIZED_NAME_FILED_TOTAL_PHOTOS, -1);
+                return rover;
+            } catch (ParseException e) {
+                e.printStackTrace();
+                return null;
+            }
+        } else {
+            return null;
+        }
     }
 
     private void showRoverInfo(Rover rover) {
@@ -181,8 +252,15 @@ public class MainActivity
     }
 
     private void showRoverSettingsDialog() {
-        roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI,
-                nasaMarsPhotosJsonParser);
+        Rover chosenRover = loadRoverFromPreferences();
+        if (chosenRover != null) {
+            roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI,
+                    nasaMarsPhotosJsonParser,
+                    chosenRover.name);
+        } else {
+            roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI,
+                    nasaMarsPhotosJsonParser);
+        }
         roverSettingsDialogFragment.show(getSupportFragmentManager(), RoverSettingsDialogFragment.TAG);
     }
 
