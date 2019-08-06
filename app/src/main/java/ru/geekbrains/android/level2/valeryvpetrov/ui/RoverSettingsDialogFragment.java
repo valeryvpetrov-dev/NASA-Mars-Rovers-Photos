@@ -24,11 +24,12 @@ import java.util.List;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import pl.droidsonroids.gif.GifImageView;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosAPI;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosJsonParser;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverListResponse;
 
 @UiThread
 public class RoverSettingsDialogFragment
@@ -49,8 +50,6 @@ public class RoverSettingsDialogFragment
 
     @NonNull
     private NASAMarsPhotosAPI nasaMarsPhotosAPI;
-    @NonNull
-    private NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser;
 
     private List<Rover> roverList;                  // list of all available rovers
     private Rover chosenRover;              // rover user want ot observe
@@ -61,16 +60,13 @@ public class RoverSettingsDialogFragment
     private RadioGroup radioGroupRoverNames;
     private GifImageView viewProgressRoverNames;
 
-    RoverSettingsDialogFragment(@NonNull NASAMarsPhotosAPI nasaMarsPhotosAPI,
-                                @NonNull NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser) {
+    RoverSettingsDialogFragment(@NonNull NASAMarsPhotosAPI nasaMarsPhotosAPI) {
         this.nasaMarsPhotosAPI = nasaMarsPhotosAPI;
-        this.nasaMarsPhotosJsonParser = nasaMarsPhotosJsonParser;
     }
 
     RoverSettingsDialogFragment(@NonNull NASAMarsPhotosAPI nasaMarsPhotosAPI,
-                                @NonNull NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser,
                                 @NonNull String chosenRoverName) {
-        this(nasaMarsPhotosAPI, nasaMarsPhotosJsonParser);
+        this(nasaMarsPhotosAPI);
         this.chosenRoverName = chosenRoverName;
     }
 
@@ -103,7 +99,7 @@ public class RoverSettingsDialogFragment
             RadioButton checkedRadioButton = radioGroup.findViewById(radioGroup.getCheckedRadioButtonId());
             String checkedRoverName = checkedRadioButton.getText().toString();
             for (Rover rover : roverList) {
-                if (rover.name.equals(checkedRoverName)) {
+                if (rover.getName().equals(checkedRoverName)) {
                     chosenRover = rover;
                     break;
                 }
@@ -131,14 +127,18 @@ public class RoverSettingsDialogFragment
     @WorkerThread
     @Override
     public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-        roverList = nasaMarsPhotosJsonParser.deserializeList(Rover.class,
-                response.body().string(),
-                NASAMarsPhotosAPI.JSON_ROOT_NAME_ROVER_LIST);
-        if (roverList != null) {
-            handlerUI.post(() -> {
-                viewProgressRoverNames.setVisibility(View.GONE);
-                inflateRoverNames(roverList);
-            });
+        ResponseBody responseBody = response.body();
+        if (responseBody != null) {
+            String responseBodyString = responseBody.string();
+            roverList = NASAMarsPhotosAPI.GSON
+                    .fromJson(responseBodyString, RoverListResponse.class)
+                    .getRovers();
+            if (roverList != null) {
+                handlerUI.post(() -> {
+                    viewProgressRoverNames.setVisibility(View.GONE);
+                    inflateRoverNames(roverList);
+                });
+            }
         }
     }
 
@@ -146,8 +146,8 @@ public class RoverSettingsDialogFragment
         RadioButton radioButtonRoverNameChecked = null;
         for (Rover rover : roverList) {
             RadioButton radioButtonRoverName = new RadioButton(getContext());
-            radioButtonRoverName.setText(rover.name);
-            if (chosenRoverName != null && chosenRoverName.equals(rover.name)) {
+            radioButtonRoverName.setText(rover.getName());
+            if (chosenRoverName != null && chosenRoverName.equals(rover.getName())) {
                 radioButtonRoverNameChecked = radioButtonRoverName;
             }
             radioGroupRoverNames.addView(radioButtonRoverName);

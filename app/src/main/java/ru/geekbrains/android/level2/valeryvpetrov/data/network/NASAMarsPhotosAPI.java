@@ -4,6 +4,9 @@ import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,9 +19,11 @@ import ru.geekbrains.android.level2.valeryvpetrov.BuildConfig;
 
 public class NASAMarsPhotosAPI {
 
-    public static final String JSON_ROOT_NAME_ROVER_LIST = "rovers";
-    public static final String JSON_ROOT_NAME_PHOTO_LIST = "photos";
-    public static final String JSON_ROOT_NAME_ROVER = "rover";
+    public static final String DATE_FORMAT = "yyyy-MM-dd";
+
+    public static final Gson GSON = new GsonBuilder()
+            .setDateFormat(DATE_FORMAT)
+            .create();
 
     private static final String API_ROOT = "https://api.nasa.gov/mars-photos/api/v1";
 

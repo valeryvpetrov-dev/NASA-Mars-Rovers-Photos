@@ -33,14 +33,17 @@ import java.util.List;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import pl.droidsonroids.gif.GifImageView;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosAPI;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosJsonParser;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverPhotoListResponse;
 import ru.geekbrains.android.level2.valeryvpetrov.service.RoverInfoService;
+
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.dateToString;
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.stringToDate;
 
 @UiThread
 public class MainActivity
@@ -48,11 +51,18 @@ public class MainActivity
         implements SearchView.OnQueryTextListener, RoverSettingsDialogFragment.RoverSettingsDialogListener {
 
     private static final String SHARED_PREFERENCES_NAME = "ChosenRoverSP";
+    private static final String SHARED_PREFERENCES_KEY_ROVER_ID = "id";
+    private static final String SHARED_PREFERENCES_KEY_ROVER_NAME = "name";
+    private static final String SHARED_PREFERENCES_KEY_ROVER_LANDING_DATE = "landingDate";
+    private static final String SHARED_PREFERENCES_KEY_ROVER_LAUNCH_DATE = "launchDate";
+    private static final String SHARED_PREFERENCES_KEY_ROVER_STATUS = "status";
+    private static final String SHARED_PREFERENCES_KEY_ROVER_MAX_SOL = "maxSol";
+    private static final String SHARED_PREFERENCES_KEY_ROVER_MAX_DATE = "maxDate";
+    private static final String SHARED_PREFERENCES_KEY_ROVER_TOTAL_PHOTOS = "totalPhotos";
 
     private Handler handlerUI;
 
     private NASAMarsPhotosAPI nasaMarsPhotosAPI;
-    private NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser;
 
     private SearchView searchViewPhotos;
     private GifImageView viewProgressPhotos;
@@ -64,7 +74,7 @@ public class MainActivity
 
     @Nullable
     private Rover roverPreferences;
-    private int latestSol;  // assigns via RoverInfoService
+    private long latestSol;  // assigns via RoverInfoService
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,7 +84,6 @@ public class MainActivity
         handlerUI = new Handler(Looper.getMainLooper());
 
         nasaMarsPhotosAPI = NASAMarsPhotosAPI.getInstance();
-        nasaMarsPhotosJsonParser = NASAMarsPhotosJsonParser.getInstance();
         initUI();
         configureActionBar();
 
@@ -101,7 +110,7 @@ public class MainActivity
     private void startRoverInfoService() {
         if (roverPreferences != null) {
             Intent roverInfoServiceIntent = new Intent(this, RoverInfoService.class);
-            roverInfoServiceIntent.putExtra(RoverInfoService.EXTRA_ROVER_NAME, roverPreferences.name);
+            roverInfoServiceIntent.putExtra(RoverInfoService.EXTRA_ROVER_NAME, roverPreferences.getName());
             RoverInfoService.enqueueWork(this, roverInfoServiceIntent);
         }
     }
@@ -109,7 +118,7 @@ public class MainActivity
     private void handleLaunchIntent(@Nullable Intent intent) {
         if (intent != null) {
             // -1 means that activity launch intent came not from RoverInfoService
-            latestSol = intent.getIntExtra(RoverInfoService.EXTRA_LATEST_SOL, -1);
+            latestSol = intent.getLongExtra(RoverInfoService.EXTRA_LATEST_SOL, -1);
         }
     }
 
@@ -153,10 +162,10 @@ public class MainActivity
         if (query.length() > 0) {
             if (roverPreferences != null) { // rover is selected
                 int sol = Integer.valueOf(query.trim());
-                if (sol >= 0 && sol <= roverPreferences.maxSol) {   // sol relates to rover settings
+                if (sol >= 0 && sol <= roverPreferences.getMaxSol()) {   // sol relates to rover settings
                     viewProgressPhotos.setVisibility(View.VISIBLE);
                     nasaMarsPhotosAPI
-                            .getPhotosFromRoverBySol(roverPreferences.name, sol, 1)
+                            .getPhotosFromRoverBySol(roverPreferences.getName(), sol, 1)
                             .enqueue(new Callback() {
                                 @Override
                                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -168,14 +177,18 @@ public class MainActivity
 
                                 @Override
                                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                                    photoList = nasaMarsPhotosJsonParser.deserializeList(Photo.class,
-                                            response.body().string(),
-                                            NASAMarsPhotosAPI.JSON_ROOT_NAME_PHOTO_LIST);
-                                    if (photoList != null) {
-                                        handlerUI.post(() -> {
-                                            viewProgressPhotos.setVisibility(View.GONE);
-                                            adapterPhotos.updatePhotoList(photoList);
-                                        });
+                                    ResponseBody responseBody = response.body();
+                                    if (responseBody != null) {
+                                        String responseBodyString = responseBody.string();
+                                        photoList = NASAMarsPhotosAPI.GSON
+                                                .fromJson(responseBodyString, RoverPhotoListResponse.class)
+                                                .getPhotos();
+                                        if (photoList != null) {
+                                            handlerUI.post(() -> {
+                                                viewProgressPhotos.setVisibility(View.GONE);
+                                                adapterPhotos.updatePhotoList(photoList);
+                                            });
+                                        }
                                     }
                                 }
                             });
@@ -227,38 +240,39 @@ public class MainActivity
 
     private void savePreferences(@NonNull Rover chosenRover) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
-
         SharedPreferences.Editor editor = sharedPreferences.edit();
         putRover(chosenRover, editor);
         editor.apply();
     }
 
     private void putRover(@NonNull Rover rover, @NonNull SharedPreferences.Editor editor) {
-        editor.putInt(Rover.SERIALIZED_NAME_FILED_ID, rover.id);
-        editor.putString(Rover.SERIALIZED_NAME_FILED_NAME, rover.name);
-        editor.putString(Rover.SERIALIZED_NAME_FILED_LANDING_DATE, TypeConverter.dateToString(rover.landingDate));
-        editor.putString(Rover.SERIALIZED_NAME_FILED_LAUNCH_DATE, TypeConverter.dateToString(rover.launchDate));
-        editor.putString(Rover.SERIALIZED_NAME_FILED_STATUS, rover.status);
-        editor.putInt(Rover.SERIALIZED_NAME_FILED_MAX_SOL, rover.maxSol);
-        editor.putString(Rover.SERIALIZED_NAME_FILED_MAX_DATE, TypeConverter.dateToString(rover.maxDate));
-        editor.putInt(Rover.SERIALIZED_NAME_FILED_TOTAL_PHOTOS, rover.totalPhotos);
+        editor.putLong(SHARED_PREFERENCES_KEY_ROVER_ID, rover.getId());
+        editor.putString(SHARED_PREFERENCES_KEY_ROVER_NAME, rover.getName());
+        editor.putString(SHARED_PREFERENCES_KEY_ROVER_LANDING_DATE, dateToString(rover.getLandingDate()));
+        editor.putString(SHARED_PREFERENCES_KEY_ROVER_LAUNCH_DATE, dateToString(rover.getLaunchDate()));
+        editor.putString(SHARED_PREFERENCES_KEY_ROVER_STATUS, rover.getStatus());
+        editor.putLong(SHARED_PREFERENCES_KEY_ROVER_MAX_SOL, rover.getMaxSol());
+        editor.putString(SHARED_PREFERENCES_KEY_ROVER_MAX_DATE, dateToString(rover.getMaxDate()));
+        editor.putLong(SHARED_PREFERENCES_KEY_ROVER_TOTAL_PHOTOS, rover.getTotalPhotos());
     }
 
     @Nullable
     private Rover getRover(@NonNull SharedPreferences sharedPreferences) {
-        Rover rover = new Rover();
+        Rover.RoverBuilder roverBuilder = Rover.builder();
 
-        rover.id = sharedPreferences.getInt(Rover.SERIALIZED_NAME_FILED_ID, -1);
-        if (rover.id != -1) {
+        long id = sharedPreferences.getLong(SHARED_PREFERENCES_KEY_ROVER_ID, -1);
+        if (id != -1) {
             try {
-                rover.name = sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_NAME, null);
-                rover.landingDate = TypeConverter.stringToDate(sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_LANDING_DATE, null));
-                rover.launchDate = TypeConverter.stringToDate(sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_LAUNCH_DATE, null));
-                rover.status = sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_STATUS, null);
-                rover.maxSol = sharedPreferences.getInt(Rover.SERIALIZED_NAME_FILED_MAX_SOL, -1);
-                rover.maxDate = TypeConverter.stringToDate(sharedPreferences.getString(Rover.SERIALIZED_NAME_FILED_MAX_DATE, null));
-                rover.totalPhotos = sharedPreferences.getInt(Rover.SERIALIZED_NAME_FILED_TOTAL_PHOTOS, -1);
-                return rover;
+                return roverBuilder
+                        .id(id)
+                        .name(sharedPreferences.getString(SHARED_PREFERENCES_KEY_ROVER_NAME, null))
+                        .landingDate(stringToDate(sharedPreferences.getString(SHARED_PREFERENCES_KEY_ROVER_LANDING_DATE, null)))
+                        .launchDate(stringToDate(sharedPreferences.getString(SHARED_PREFERENCES_KEY_ROVER_LAUNCH_DATE, null)))
+                        .status(sharedPreferences.getString(SHARED_PREFERENCES_KEY_ROVER_STATUS, null))
+                        .maxSol(sharedPreferences.getLong(SHARED_PREFERENCES_KEY_ROVER_MAX_SOL, -1))
+                        .maxDate(stringToDate(sharedPreferences.getString(SHARED_PREFERENCES_KEY_ROVER_MAX_DATE, null)))
+                        .totalPhotos(sharedPreferences.getLong(SHARED_PREFERENCES_KEY_ROVER_TOTAL_PHOTOS, -1))
+                        .build();
             } catch (ParseException e) {
                 e.printStackTrace();
                 return null;
@@ -269,24 +283,21 @@ public class MainActivity
     }
 
     private void showRoverInfo(@NonNull Rover rover) {
-        ((TextView) findViewById(R.id.text_view_name)).setText(rover.name);
-        ((TextView) findViewById(R.id.text_view_landing_date)).setText(TypeConverter.dateToString(rover.landingDate));
-        ((TextView) findViewById(R.id.text_view_launch_date)).setText(TypeConverter.dateToString(rover.launchDate));
-        ((TextView) findViewById(R.id.text_view_status)).setText(rover.status);
-        ((TextView) findViewById(R.id.text_view_max_sol)).setText(String.valueOf(rover.maxSol));
-        ((TextView) findViewById(R.id.text_view_max_date)).setText(TypeConverter.dateToString(rover.maxDate));
-        ((TextView) findViewById(R.id.text_view_total_photos)).setText(String.valueOf(rover.totalPhotos));
+        ((TextView) findViewById(R.id.text_view_name)).setText(rover.getName());
+        ((TextView) findViewById(R.id.text_view_landing_date)).setText(dateToString(rover.getLandingDate()));
+        ((TextView) findViewById(R.id.text_view_launch_date)).setText(dateToString(rover.getLaunchDate()));
+        ((TextView) findViewById(R.id.text_view_status)).setText(rover.getStatus());
+        ((TextView) findViewById(R.id.text_view_max_sol)).setText(String.valueOf(rover.getMaxSol()));
+        ((TextView) findViewById(R.id.text_view_max_date)).setText(dateToString(rover.getMaxDate()));
+        ((TextView) findViewById(R.id.text_view_total_photos)).setText(String.valueOf(rover.getTotalPhotos()));
     }
 
     private void showRoverSettingsDialog() {
         Rover chosenRover = loadRoverFromPreferences();
         if (chosenRover != null) {
-            roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI,
-                    nasaMarsPhotosJsonParser,
-                    chosenRover.name);
+            roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI, chosenRover.getName());
         } else {
-            roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI,
-                    nasaMarsPhotosJsonParser);
+            roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI);
         }
         roverSettingsDialogFragment.show(getSupportFragmentManager(), RoverSettingsDialogFragment.TAG);
     }

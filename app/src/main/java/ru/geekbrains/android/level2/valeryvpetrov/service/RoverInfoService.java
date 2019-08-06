@@ -18,12 +18,14 @@ import java.io.IOException;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosAPI;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosJsonParser;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverDetailsResponse;
 import ru.geekbrains.android.level2.valeryvpetrov.ui.MainActivity;
+
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.dateToString;
 
 @WorkerThread
 public class RoverInfoService extends JobIntentService implements Callback {
@@ -35,7 +37,6 @@ public class RoverInfoService extends JobIntentService implements Callback {
     private static final int JOB_ID = 1;
 
     private NASAMarsPhotosAPI nasaMarsPhotosAPI;
-    private NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser;
 
     public static void enqueueWork(Context context, Intent intent) {
         enqueueWork(context, RoverInfoService.class, JOB_ID, intent);
@@ -44,7 +45,6 @@ public class RoverInfoService extends JobIntentService implements Callback {
     @Override
     public void onCreate() {
         nasaMarsPhotosAPI = NASAMarsPhotosAPI.getInstance();
-        nasaMarsPhotosJsonParser = NASAMarsPhotosJsonParser.getInstance();
         createNotificationChannel();
         super.onCreate();
     }
@@ -63,18 +63,22 @@ public class RoverInfoService extends JobIntentService implements Callback {
 
     @Override
     public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-        Rover rover = (Rover) nasaMarsPhotosJsonParser.deserialize(Rover.class,
-                response.body().string(),
-                NASAMarsPhotosAPI.JSON_ROOT_NAME_ROVER);
-        if (rover != null) {
-            sendNotification(rover);
+        ResponseBody responseBody = response.body();
+        if (responseBody != null) {
+            String responseBodyString = responseBody.string();
+            Rover rover = NASAMarsPhotosAPI.GSON
+                    .fromJson(responseBodyString, RoverDetailsResponse.class)
+                    .getRover();
+            if (rover != null) {
+                sendNotification(rover);
+            }
         }
     }
 
     private void sendNotification(@NonNull Rover rover) {
         Intent intentLoadLatestPhotos = new Intent(this, MainActivity.class);
-        intentLoadLatestPhotos.putExtra(EXTRA_ROVER_NAME, rover.name);
-        intentLoadLatestPhotos.putExtra(EXTRA_LATEST_SOL, rover.maxSol);
+        intentLoadLatestPhotos.putExtra(EXTRA_ROVER_NAME, rover.getName());
+        intentLoadLatestPhotos.putExtra(EXTRA_LATEST_SOL, rover.getMaxSol());
 
         TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(this);
         taskStackBuilder.addNextIntent(intentLoadLatestPhotos);
@@ -82,9 +86,9 @@ public class RoverInfoService extends JobIntentService implements Callback {
                 .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
 
         String contentTitle = String.format("%s rover info.",
-                rover.name);
+                rover.getName());
         String contentText = String.format("Last launch was on %s.",
-                TypeConverter.dateToString(rover.maxDate));
+                dateToString(rover.getMaxDate()));
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ROVER_INFO_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(contentTitle)

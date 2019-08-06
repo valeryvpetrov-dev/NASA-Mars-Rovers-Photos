@@ -18,8 +18,9 @@ import com.github.chrisbanes.photoview.PhotoView;
 import java.util.List;
 
 import ru.geekbrains.android.level2.valeryvpetrov.R;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
+
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.dateToString;
 
 @UiThread
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> {
@@ -41,12 +42,12 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
         void bind(@NonNull Photo photo) {
             Glide.with(itemView.getContext())
-                    .load(photo.imgSrc)
+                    .load(photo.getImgSrc())
                     .thumbnail(Glide.with(itemView.getContext()).load(R.drawable.loading))
                     .into(imageViewPhoto);
 
-            textViewCameraName.setText(photo.camera.fullName);
-            textViewEarthDate.setText(TypeConverter.dateToString(photo.earthDate));
+            textViewCameraName.setText(photo.getCamera().getFullName());
+            textViewEarthDate.setText(dateToString(photo.getEarthDate()));
 
             imageViewPhoto.setOnClickListener(this);
         }

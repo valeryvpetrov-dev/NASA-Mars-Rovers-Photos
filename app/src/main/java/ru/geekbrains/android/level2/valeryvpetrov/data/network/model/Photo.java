@@ -5,16 +5,18 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.Date;
 
+import lombok.Value;
+
+@Value
 public class Photo {
 
-    @SerializedName("id")
-    public int id;
-    @SerializedName("sol")
-    public int sol;
-    @SerializedName("camera")
-    public Camera camera;
-    @SerializedName("img_src")
-    public String imgSrc;
+    Camera camera;
     @SerializedName("earth_date")
-    public Date earthDate;
+    Date earthDate;
+    long id;
+    @SerializedName("img_src")
+    String imgSrc;
+    Rover rover;
+    long sol;
+
 }
