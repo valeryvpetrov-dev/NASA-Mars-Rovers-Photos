@@ -1,5 +1,6 @@
 package ru.geekbrains.android.level2.valeryvpetrov.data.network;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -70,7 +71,8 @@ public class NASAMarsPhotosAPI {
     }
 
     @Nullable
-    private Call makeCall(@NonNull String urlString, @Nullable Map<String, String> queryParameterMap) {
+    private Call makeCall(@NonNull String urlString,
+                          @Nullable Map<String, String> queryParameterMap) {
         HttpUrl httpUrl = HttpUrl.parse(urlString);
         if (httpUrl != null) {
             HttpUrl.Builder urlBuilder = httpUrl.newBuilder();

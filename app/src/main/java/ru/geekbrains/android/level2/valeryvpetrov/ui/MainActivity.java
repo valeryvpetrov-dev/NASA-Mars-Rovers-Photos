@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
@@ -41,6 +42,7 @@ import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 import ru.geekbrains.android.level2.valeryvpetrov.service.RoverInfoService;
 
+@UiThread
 public class MainActivity
         extends AppCompatActivity
         implements SearchView.OnQueryTextListener, RoverSettingsDialogFragment.RoverSettingsDialogListener {

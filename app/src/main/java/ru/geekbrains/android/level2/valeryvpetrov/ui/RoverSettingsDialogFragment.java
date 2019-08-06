@@ -14,6 +14,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
+import androidx.annotation.WorkerThread;
 import androidx.fragment.app.DialogFragment;
 
 import java.io.IOException;
@@ -28,6 +30,7 @@ import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosAPI
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosJsonParser;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 
+@UiThread
 public class RoverSettingsDialogFragment
         extends DialogFragment
         implements Callback {
@@ -114,6 +117,7 @@ public class RoverSettingsDialogFragment
         nasaMarsPhotosAPI.getRoverList().enqueue(this);
     }
 
+    @WorkerThread
     @Override
     public void onFailure(@NonNull Call call, @NonNull IOException e) {
         handlerUI.post(() -> {
@@ -124,6 +128,7 @@ public class RoverSettingsDialogFragment
         });
     }
 
+    @WorkerThread
     @Override
     public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
         roverList = nasaMarsPhotosJsonParser.deserializeList(Rover.class,

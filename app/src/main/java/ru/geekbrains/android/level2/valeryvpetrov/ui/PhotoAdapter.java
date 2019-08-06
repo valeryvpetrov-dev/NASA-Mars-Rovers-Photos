@@ -9,6 +9,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.UiThread;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -20,6 +21,7 @@ import ru.geekbrains.android.level2.valeryvpetrov.R;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
 
+@UiThread
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> {
 
     @NonNull

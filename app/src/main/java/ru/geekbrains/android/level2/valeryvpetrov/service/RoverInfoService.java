@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
 import androidx.core.app.JobIntentService;
 import androidx.core.app.NotificationCompat;
 
@@ -24,6 +25,7 @@ import ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 import ru.geekbrains.android.level2.valeryvpetrov.ui.MainActivity;
 
+@WorkerThread
 public class RoverInfoService extends JobIntentService implements Callback {
 
     public static final String EXTRA_LATEST_SOL = "latestSol";
