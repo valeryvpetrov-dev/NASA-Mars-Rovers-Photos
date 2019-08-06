@@ -63,7 +63,9 @@ public class NASAMarsPhotosAPI {
         return makeCall(String.format("%s/rovers/", API_ROOT), null);
     }
 
-    public Call getPhotosFromRoverBySol(@NonNull String roverName, int sol, int page) {
+    public Call getPhotosFromRoverBySol(@NonNull String roverName,
+                                        @IntRange(from = 0) int sol,
+                                        @IntRange(from = 0) int page) {
         Map<String, String> queryParameterMap = new HashMap<>();
         queryParameterMap.put("sol", String.valueOf(sol));
         queryParameterMap.put("page", String.valueOf(page));
