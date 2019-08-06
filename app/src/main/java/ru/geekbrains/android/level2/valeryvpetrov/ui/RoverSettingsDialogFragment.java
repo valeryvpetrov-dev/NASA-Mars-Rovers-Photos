@@ -21,6 +21,9 @@ import androidx.fragment.app.DialogFragment;
 import java.io.IOException;
 import java.util.List;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnCheckedChanged;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
@@ -50,15 +53,14 @@ public class RoverSettingsDialogFragment
 
     @NonNull
     private NASAMarsPhotosAPI nasaMarsPhotosAPI;
-
     private List<Rover> roverList;                  // list of all available rovers
-    private Rover chosenRover;              // rover user want ot observe
 
+    private Rover chosenRover;              // rover user want ot observe
     @Nullable
     private String chosenRoverName;             // previously chosen rover name
 
-    private RadioGroup radioGroupRoverNames;
-    private GifImageView viewProgressRoverNames;
+    @BindView(R.id.radio_group_rover_names)             RadioGroup radioGroupRoverNames;
+    @BindView(R.id.progress_rover_names)                GifImageView viewProgressRoverNames;
 
     RoverSettingsDialogFragment(@NonNull NASAMarsPhotosAPI nasaMarsPhotosAPI) {
         this.nasaMarsPhotosAPI = nasaMarsPhotosAPI;
@@ -83,19 +85,8 @@ public class RoverSettingsDialogFragment
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         LayoutInflater layoutInflater = getActivity().getLayoutInflater();
         View view = layoutInflater.inflate(R.layout.dialog_rover_settings, null);
-        initUI(view);
-        builder
-                .setView(view)
-                .setPositiveButton(R.string.button_dialog_settings_save, (dialogInterface, i) -> listener.onSaveClick(chosenRover))
-                .setNegativeButton(R.string.button_dialog_settings_cancel, (dialogInterface, i) -> listener.onCancelClick());
-        return builder.create();
-    }
-
-    private void initUI(@NonNull View view) {
-        radioGroupRoverNames = view.findViewById(R.id.radio_group_rover_names);
-        viewProgressRoverNames = view.findViewById(R.id.progress_rover_names);
-
-        radioGroupRoverNames.setOnCheckedChangeListener((radioGroup, i) -> {
+        ButterKnife.bind(this, view);
+        radioGroupRoverNames.setOnCheckedChangeListener(((radioGroup, i) -> {
             RadioButton checkedRadioButton = radioGroup.findViewById(radioGroup.getCheckedRadioButtonId());
             String checkedRoverName = checkedRadioButton.getText().toString();
             for (Rover rover : roverList) {
@@ -104,7 +95,17 @@ public class RoverSettingsDialogFragment
                     break;
                 }
             }
-        });
+        }));
+        builder
+                .setView(view)
+                .setPositiveButton(R.string.button_dialog_settings_save, (dialogInterface, i) -> listener.onSaveClick(chosenRover))
+                .setNegativeButton(R.string.button_dialog_settings_cancel, (dialogInterface, i) -> listener.onCancelClick());
+        return builder.create();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
         loadRoverList();
     }
 

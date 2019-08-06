@@ -30,6 +30,8 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
@@ -64,22 +66,41 @@ public class MainActivity
 
     private NASAMarsPhotosAPI nasaMarsPhotosAPI;
 
-    private SearchView searchViewPhotos;
-    private GifImageView viewProgressPhotos;
+    // application bar functionality
+    @BindView(R.id.toolbar)                     Toolbar toolbar;
+    @BindView(R.id.text_view_name)              TextView textViewRoverName;
+    @BindView(R.id.text_view_landing_date)      TextView textViewLandingDate;
+    @BindView(R.id.text_view_launch_date)       TextView textViewLaunchDate;
+    @BindView(R.id.text_view_status)            TextView textViewStatus;
+    @BindView(R.id.text_view_max_sol)           TextView textViewMaxSol;
+    @BindView(R.id.text_view_max_date)          TextView textViewMaxDate;
+    @BindView(R.id.text_view_total_photos)      TextView textViewTotalPhotos;
+
+    // search functionality
+    SearchView searchViewPhotos;
+
+    // photos recycler view functionality
+    @BindView(R.id.progress_photos)             GifImageView viewProgressPhotos;
+    @BindView(R.id.recycler_view_photos)        RecyclerView recyclerViewPhotos;
     private PhotoAdapter adapterPhotos;
     @Nullable
     private List<Photo> photoList;
 
+    // rover settings dialog functionality
     private DialogFragment roverSettingsDialogFragment;
 
+    // shared preferences functionality
     @Nullable
     private Rover roverPreferences;
+
+    // service functionality
     private long latestSol;  // assigns via RoverInfoService
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        ButterKnife.bind(this);
 
         handlerUI = new Handler(Looper.getMainLooper());
 
@@ -98,8 +119,6 @@ public class MainActivity
     }
 
     private void initUI() {
-        viewProgressPhotos = findViewById(R.id.progress_photos);
-        RecyclerView recyclerViewPhotos = findViewById(R.id.recycler_view_photos);
         RecyclerView.LayoutManager recyclerViewPhotosLayoutManager = new LinearLayoutManager(this);
         recyclerViewPhotos.setLayoutManager(recyclerViewPhotosLayoutManager);
         photoList = new ArrayList<>();
@@ -123,7 +142,6 @@ public class MainActivity
     }
 
     private void configureActionBar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
     }
 
@@ -283,13 +301,13 @@ public class MainActivity
     }
 
     private void showRoverInfo(@NonNull Rover rover) {
-        ((TextView) findViewById(R.id.text_view_name)).setText(rover.getName());
-        ((TextView) findViewById(R.id.text_view_landing_date)).setText(dateToString(rover.getLandingDate()));
-        ((TextView) findViewById(R.id.text_view_launch_date)).setText(dateToString(rover.getLaunchDate()));
-        ((TextView) findViewById(R.id.text_view_status)).setText(rover.getStatus());
-        ((TextView) findViewById(R.id.text_view_max_sol)).setText(String.valueOf(rover.getMaxSol()));
-        ((TextView) findViewById(R.id.text_view_max_date)).setText(dateToString(rover.getMaxDate()));
-        ((TextView) findViewById(R.id.text_view_total_photos)).setText(String.valueOf(rover.getTotalPhotos()));
+        textViewRoverName.setText(rover.getName());
+        textViewLandingDate.setText(dateToString(rover.getLandingDate()));
+        textViewLaunchDate.setText(dateToString(rover.getLaunchDate()));
+        textViewStatus.setText(rover.getStatus());
+        textViewMaxSol.setText(String.valueOf(rover.getMaxSol()));
+        textViewMaxDate.setText(dateToString(rover.getMaxDate()));
+        textViewTotalPhotos.setText(String.valueOf(rover.getTotalPhotos()));
     }
 
     private void showRoverSettingsDialog() {

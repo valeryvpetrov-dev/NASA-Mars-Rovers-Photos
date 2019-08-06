@@ -17,6 +17,9 @@ import com.github.chrisbanes.photoview.PhotoView;
 
 import java.util.List;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
 
@@ -28,16 +31,14 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     @NonNull
     private List<Photo> photoList;
 
-    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-        private ImageView imageViewPhoto;
-        private TextView textViewCameraName;
-        private TextView textViewEarthDate;
+    public class ViewHolder extends RecyclerView.ViewHolder {
+        @BindView(R.id.image_view_photo)                ImageView imageViewPhoto;
+        @BindView(R.id.text_view_camera_name)           TextView textViewCameraName;
+        @BindView(R.id.text_view_shot_earth_date)       TextView textViewEarthDate;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
-            imageViewPhoto = itemView.findViewById(R.id.image_view_photo);
-            textViewCameraName = itemView.findViewById(R.id.text_view_camera_name);
-            textViewEarthDate = itemView.findViewById(R.id.text_view_shot_earth_date);
+            ButterKnife.bind(this, itemView);
         }
 
         void bind(@NonNull Photo photo) {
@@ -48,15 +49,11 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
             textViewCameraName.setText(photo.getCamera().getFullName());
             textViewEarthDate.setText(dateToString(photo.getEarthDate()));
-
-            imageViewPhoto.setOnClickListener(this);
         }
 
-        @Override
-        public void onClick(View view) {
-            if (view.getId() == R.id.image_view_photo) {
-                showImageDialog();
-            }
+        @OnClick(R.id.image_view_photo)
+        public void onPhotoClick() {
+            showImageDialog();
         }
 
         private void showImageDialog() {
@@ -79,16 +76,6 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         this.photoList = photoList;
     }
 
-    void updatePhotoList(@NonNull List<Photo> photoList) {
-        this.photoList = photoList;
-        notifyDataSetChanged();
-    }
-
-    void clearPhotoList() {
-        photoList.clear();
-        notifyDataSetChanged();
-    }
-
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -106,5 +93,15 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     @Override
     public int getItemCount() {
         return photoList.size();
+    }
+
+    void updatePhotoList(@NonNull List<Photo> photoList) {
+        this.photoList = photoList;
+        notifyDataSetChanged();
+    }
+
+    void clearPhotoList() {
+        photoList.clear();
+        notifyDataSetChanged();
     }
 }
