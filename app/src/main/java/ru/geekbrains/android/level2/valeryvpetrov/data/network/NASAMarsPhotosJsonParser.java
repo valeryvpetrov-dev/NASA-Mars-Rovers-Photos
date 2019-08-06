@@ -1,5 +1,6 @@
 package ru.geekbrains.android.level2.valeryvpetrov.data.network;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
@@ -29,6 +30,7 @@ public class NASAMarsPhotosJsonParser {
                 .create();
     }
 
+    @NonNull
     public static NASAMarsPhotosJsonParser getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new NASAMarsPhotosJsonParser();
@@ -37,7 +39,9 @@ public class NASAMarsPhotosJsonParser {
     }
 
     @Nullable
-    public Object deserialize(Class objectClass, String objectJson, @Nullable String rootName) {
+    public Object deserialize(@NonNull Class objectClass,
+                              @NonNull String objectJson,
+                              @Nullable String rootName) {
         try {
             JSONObject responseJSON = new JSONObject(objectJson);
 
@@ -61,7 +65,9 @@ public class NASAMarsPhotosJsonParser {
     }
 
     @Nullable
-    public List deserializeList(Class itemClass, String listJson, @Nullable String rootName) {
+    public List deserializeList(@NonNull Class itemClass,
+                                @NonNull String listJson,
+                                @Nullable String rootName) {
         try {
             JSONObject responseJSON = new JSONObject(listJson);
 

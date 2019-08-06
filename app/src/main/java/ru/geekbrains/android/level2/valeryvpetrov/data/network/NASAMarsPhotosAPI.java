@@ -46,6 +46,7 @@ public class NASAMarsPhotosAPI {
                 .build();
     }
 
+    @NonNull
     public static NASAMarsPhotosAPI getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new NASAMarsPhotosAPI();
@@ -53,7 +54,7 @@ public class NASAMarsPhotosAPI {
         return INSTANCE;
     }
 
-    public Call getRoverByName(String roverName) {
+    public Call getRoverByName(@NonNull String roverName) {
         return makeCall(String.format("%s/rovers/%s/", API_ROOT, roverName), null);
     }
 
@@ -68,6 +69,7 @@ public class NASAMarsPhotosAPI {
         return makeCall(String.format("%s/rovers/%s/photos", API_ROOT, roverName), queryParameterMap);
     }
 
+    @Nullable
     private Call makeCall(@NonNull String urlString, @Nullable Map<String, String> queryParameterMap) {
         HttpUrl httpUrl = HttpUrl.parse(urlString);
         if (httpUrl != null) {

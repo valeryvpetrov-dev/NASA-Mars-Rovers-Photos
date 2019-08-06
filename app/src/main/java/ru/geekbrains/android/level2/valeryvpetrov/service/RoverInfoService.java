@@ -12,8 +12,6 @@ import androidx.annotation.NonNull;
 import androidx.core.app.JobIntentService;
 import androidx.core.app.NotificationCompat;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.io.IOException;
 
 import okhttp3.Call;
@@ -58,11 +56,11 @@ public class RoverInfoService extends JobIntentService implements Callback {
     }
 
     @Override
-    public void onFailure(@NotNull Call call, @NotNull IOException e) {
+    public void onFailure(@NonNull Call call, @NonNull IOException e) {
     }
 
     @Override
-    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
         Rover rover = (Rover) nasaMarsPhotosJsonParser.deserialize(Rover.class,
                 response.body().string(),
                 NASAMarsPhotosAPI.JSON_ROOT_NAME_ROVER);
@@ -71,7 +69,7 @@ public class RoverInfoService extends JobIntentService implements Callback {
         }
     }
 
-    private void sendNotification(Rover rover) {
+    private void sendNotification(@NonNull Rover rover) {
         Intent intentLoadLatestPhotos = new Intent(this, MainActivity.class);
         intentLoadLatestPhotos.putExtra(EXTRA_ROVER_NAME, rover.name);
         intentLoadLatestPhotos.putExtra(EXTRA_LATEST_SOL, rover.maxSol);

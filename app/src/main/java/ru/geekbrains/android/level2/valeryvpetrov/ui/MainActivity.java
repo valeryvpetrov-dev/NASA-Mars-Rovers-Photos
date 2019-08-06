@@ -24,8 +24,6 @@ import androidx.fragment.app.DialogFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -57,10 +55,12 @@ public class MainActivity
     private SearchView searchViewPhotos;
     private GifImageView viewProgressPhotos;
     private PhotoAdapter adapterPhotos;
+    @Nullable
     private List<Photo> photoList;
 
     private DialogFragment roverSettingsDialogFragment;
 
+    @Nullable
     private Rover roverPreferences;
     private int latestSol;  // assigns via RoverInfoService
 
@@ -145,7 +145,7 @@ public class MainActivity
     }
 
     @Override
-    public boolean onQueryTextSubmit(String query) {
+    public boolean onQueryTextSubmit(@NonNull String query) {
         searchViewPhotos.clearFocus();  // hide keyboard after submission
         query = query.trim();
         if (query.length() > 0) {
@@ -153,28 +153,30 @@ public class MainActivity
                 int sol = Integer.valueOf(query.trim());
                 if (sol >= 0 && sol <= roverPreferences.maxSol) {   // sol relates to rover settings
                     viewProgressPhotos.setVisibility(View.VISIBLE);
-                    nasaMarsPhotosAPI.getPhotosFromRoverBySol(roverPreferences.name, sol, 1).enqueue(new Callback() {
-                        @Override
-                        public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                            handlerUI.post(() -> {
-                                viewProgressPhotos.setVisibility(View.GONE);
-                                showToast(getString(R.string.error_network_failure));
-                            });
-                        }
+                    nasaMarsPhotosAPI
+                            .getPhotosFromRoverBySol(roverPreferences.name, sol, 1)
+                            .enqueue(new Callback() {
+                                @Override
+                                public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                                    handlerUI.post(() -> {
+                                        viewProgressPhotos.setVisibility(View.GONE);
+                                        showToast(getString(R.string.error_network_failure));
+                                    });
+                                }
 
-                        @Override
-                        public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                            photoList = nasaMarsPhotosJsonParser.deserializeList(Photo.class,
-                                    response.body().string(),
-                                    NASAMarsPhotosAPI.JSON_ROOT_NAME_PHOTO_LIST);
-                            if (photoList != null) {
-                                handlerUI.post(() -> {
-                                    viewProgressPhotos.setVisibility(View.GONE);
-                                    adapterPhotos.updatePhotoList(photoList);
-                                });
-                            }
-                        }
-                    });
+                                @Override
+                                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                                    photoList = nasaMarsPhotosJsonParser.deserializeList(Photo.class,
+                                            response.body().string(),
+                                            NASAMarsPhotosAPI.JSON_ROOT_NAME_PHOTO_LIST);
+                                    if (photoList != null) {
+                                        handlerUI.post(() -> {
+                                            viewProgressPhotos.setVisibility(View.GONE);
+                                            adapterPhotos.updatePhotoList(photoList);
+                                        });
+                                    }
+                                }
+                            });
                     return true;
                 } else {
                     showToast(getString(R.string.error_invalid_sol));
@@ -187,12 +189,12 @@ public class MainActivity
     }
 
     @Override
-    public boolean onQueryTextChange(String newText) {
+    public boolean onQueryTextChange(@NonNull String newText) {
         return false;
     }
 
     @Override
-    public void onSaveClick(Rover chosenRover) {
+    public void onSaveClick(@NonNull Rover chosenRover) {
         roverPreferences = chosenRover;
         savePreferences(chosenRover);
         showRoverInfo(chosenRover);
@@ -221,7 +223,7 @@ public class MainActivity
         return getRover(sharedPreferences);
     }
 
-    private void savePreferences(Rover chosenRover) {
+    private void savePreferences(@NonNull Rover chosenRover) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
 
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -229,7 +231,7 @@ public class MainActivity
         editor.apply();
     }
 
-    private void putRover(Rover rover, SharedPreferences.Editor editor) {
+    private void putRover(@NonNull Rover rover, @NonNull SharedPreferences.Editor editor) {
         editor.putInt(Rover.SERIALIZED_NAME_FILED_ID, rover.id);
         editor.putString(Rover.SERIALIZED_NAME_FILED_NAME, rover.name);
         editor.putString(Rover.SERIALIZED_NAME_FILED_LANDING_DATE, TypeConverter.dateToString(rover.landingDate));
@@ -241,7 +243,7 @@ public class MainActivity
     }
 
     @Nullable
-    private Rover getRover(SharedPreferences sharedPreferences) {
+    private Rover getRover(@NonNull SharedPreferences sharedPreferences) {
         Rover rover = new Rover();
 
         rover.id = sharedPreferences.getInt(Rover.SERIALIZED_NAME_FILED_ID, -1);
@@ -264,7 +266,7 @@ public class MainActivity
         }
     }
 
-    private void showRoverInfo(Rover rover) {
+    private void showRoverInfo(@NonNull Rover rover) {
         ((TextView) findViewById(R.id.text_view_name)).setText(rover.name);
         ((TextView) findViewById(R.id.text_view_landing_date)).setText(TypeConverter.dateToString(rover.landingDate));
         ((TextView) findViewById(R.id.text_view_launch_date)).setText(TypeConverter.dateToString(rover.launchDate));
@@ -287,7 +289,7 @@ public class MainActivity
         roverSettingsDialogFragment.show(getSupportFragmentManager(), RoverSettingsDialogFragment.TAG);
     }
 
-    private void showToast(String message) {
+    private void showToast(@NonNull String message) {
         Toast.makeText(this,
                 message,
                 Toast.LENGTH_LONG)

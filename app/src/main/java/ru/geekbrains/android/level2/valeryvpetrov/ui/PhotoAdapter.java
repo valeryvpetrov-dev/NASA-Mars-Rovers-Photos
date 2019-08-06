@@ -22,6 +22,7 @@ import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
 
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> {
 
+    @NonNull
     private List<Photo> photoList;
 
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -71,11 +72,11 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         }
     }
 
-    PhotoAdapter(List<Photo> photoList) {
+    PhotoAdapter(@NonNull List<Photo> photoList) {
         this.photoList = photoList;
     }
 
-    void updatePhotoList(List<Photo> photoList) {
+    void updatePhotoList(@NonNull List<Photo> photoList) {
         this.photoList = photoList;
         notifyDataSetChanged();
     }

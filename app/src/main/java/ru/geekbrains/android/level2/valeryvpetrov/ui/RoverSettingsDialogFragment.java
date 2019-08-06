@@ -16,8 +16,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -46,26 +44,29 @@ public class RoverSettingsDialogFragment
 
     private Handler handlerUI;
 
+    @NonNull
     private NASAMarsPhotosAPI nasaMarsPhotosAPI;
+    @NonNull
     private NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser;
 
     private List<Rover> roverList;                  // list of all available rovers
     private Rover chosenRover;              // rover user want ot observe
 
+    @Nullable
     private String chosenRoverName;             // previously chosen rover name
 
     private RadioGroup radioGroupRoverNames;
     private GifImageView viewProgressRoverNames;
 
-    RoverSettingsDialogFragment(NASAMarsPhotosAPI nasaMarsPhotosAPI,
-                                NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser) {
+    RoverSettingsDialogFragment(@NonNull NASAMarsPhotosAPI nasaMarsPhotosAPI,
+                                @NonNull NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser) {
         this.nasaMarsPhotosAPI = nasaMarsPhotosAPI;
         this.nasaMarsPhotosJsonParser = nasaMarsPhotosJsonParser;
     }
 
-    RoverSettingsDialogFragment(NASAMarsPhotosAPI nasaMarsPhotosAPI,
-                                NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser,
-                                String chosenRoverName) {
+    RoverSettingsDialogFragment(@NonNull NASAMarsPhotosAPI nasaMarsPhotosAPI,
+                                @NonNull NASAMarsPhotosJsonParser nasaMarsPhotosJsonParser,
+                                @NonNull String chosenRoverName) {
         this(nasaMarsPhotosAPI, nasaMarsPhotosJsonParser);
         this.chosenRoverName = chosenRoverName;
     }
@@ -91,7 +92,7 @@ public class RoverSettingsDialogFragment
         return builder.create();
     }
 
-    private void initUI(View view) {
+    private void initUI(@NonNull View view) {
         radioGroupRoverNames = view.findViewById(R.id.radio_group_rover_names);
         viewProgressRoverNames = view.findViewById(R.id.progress_rover_names);
 
@@ -114,7 +115,7 @@ public class RoverSettingsDialogFragment
     }
 
     @Override
-    public void onFailure(@NotNull Call call, @NotNull IOException e) {
+    public void onFailure(@NonNull Call call, @NonNull IOException e) {
         handlerUI.post(() -> {
             Toast.makeText(getActivity(),
                     getString(R.string.error_network_failure),
@@ -124,7 +125,7 @@ public class RoverSettingsDialogFragment
     }
 
     @Override
-    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
         roverList = nasaMarsPhotosJsonParser.deserializeList(Rover.class,
                 response.body().string(),
                 NASAMarsPhotosAPI.JSON_ROOT_NAME_ROVER_LIST);
@@ -136,7 +137,7 @@ public class RoverSettingsDialogFragment
         }
     }
 
-    private void inflateRoverNames(List<Rover> roverList) {
+    private void inflateRoverNames(@NonNull List<Rover> roverList) {
         RadioButton radioButtonRoverNameChecked = null;
         for (Rover rover : roverList) {
             RadioButton radioButtonRoverName = new RadioButton(getContext());
