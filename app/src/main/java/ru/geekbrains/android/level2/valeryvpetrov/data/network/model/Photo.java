@@ -1,4 +1,3 @@
-
 package ru.geekbrains.android.level2.valeryvpetrov.data.network.model;
 
 import com.google.gson.annotations.SerializedName;

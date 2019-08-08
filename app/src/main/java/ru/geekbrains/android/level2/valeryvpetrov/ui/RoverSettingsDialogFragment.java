@@ -1,5 +1,6 @@
 package ru.geekbrains.android.level2.valeryvpetrov.ui;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -23,7 +24,6 @@ import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import butterknife.OnCheckedChanged;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
@@ -42,9 +42,11 @@ public class RoverSettingsDialogFragment
     static final String TAG = RoverSettingsDialogListener.class.getName();
 
     public interface RoverSettingsDialogListener {
+
         void onSaveClick(Rover chosenRover);
 
         void onCancelClick();
+
     }
 
     private RoverSettingsDialogListener listener;
@@ -98,8 +100,10 @@ public class RoverSettingsDialogFragment
         }));
         builder
                 .setView(view)
-                .setPositiveButton(R.string.button_dialog_settings_save, (dialogInterface, i) -> listener.onSaveClick(chosenRover))
-                .setNegativeButton(R.string.button_dialog_settings_cancel, (dialogInterface, i) -> listener.onCancelClick());
+                .setPositiveButton(R.string.button_dialog_settings_save, (dialogInterface, i) ->
+                        listener.onSaveClick(chosenRover))
+                .setNegativeButton(R.string.button_dialog_settings_cancel, (dialogInterface, i) ->
+                        listener.onCancelClick());
         return builder.create();
     }
 
@@ -118,10 +122,13 @@ public class RoverSettingsDialogFragment
     @Override
     public void onFailure(@NonNull Call call, @NonNull IOException e) {
         handlerUI.post(() -> {
-            Toast.makeText(getActivity(),
-                    getString(R.string.error_network_failure),
-                    Toast.LENGTH_LONG).show();
-            listener.onCancelClick();
+            Activity activity = getActivity();
+            if (activity != null) {
+                Toast.makeText(activity,
+                        activity.getString(R.string.error_network_failure),
+                        Toast.LENGTH_LONG).show();
+                listener.onCancelClick();
+            }
         });
     }
 

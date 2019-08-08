@@ -11,7 +11,7 @@
     <string name="text_view_label_list_cameras">Available cameras:</string>
     <string name="channel_rover_info_name">Rover info notification channel.</string>
     <string name="channel_rover_info_description">Rover info notification channel.</string>
-    <string name="action_load_latest_photos">Show latest photos</string>
+    <string name="action_load_latest_photos">Show new launch photos</string>
     <string name="action_settings">Settings</string>
     <string name="action_search">Search</string>
     <string name="search_view_hint_sol">Sol</string>
