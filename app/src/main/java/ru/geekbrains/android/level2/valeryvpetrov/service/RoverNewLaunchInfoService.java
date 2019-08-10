@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.os.Bundle;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -23,9 +22,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
-import okhttp3.ResponseBody;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoverAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoversGenerator;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverListResponse;
 import ru.geekbrains.android.level2.valeryvpetrov.receiver.ConnectivityChangeReceiver;
@@ -50,7 +49,7 @@ public class RoverNewLaunchInfoService
     private static final int jobId = 1;
     private int notificationId = 1;
 
-    private NASAMarsPhotosAPI nasaMarsPhotosAPI;
+    private NASAMarsRoverAPI nasaMarsRoverAPI;
 
     private boolean isWaitingForConnectivityChange;  // flag that indicates connectivity loss
 
@@ -60,7 +59,7 @@ public class RoverNewLaunchInfoService
 
     @Override
     public void onCreate() {
-        nasaMarsPhotosAPI = NASAMarsPhotosAPI.getInstance();
+        nasaMarsRoverAPI = NASAMarsRoversGenerator.createService(NASAMarsRoverAPI.class);
         isWaitingForConnectivityChange = getFlag(SHARED_PREFERENCES_KEY_FLAG_IS_WAITING_CONNECTIVITY_CHANGE);
         createNotificationChannel();
         super.onCreate();
@@ -106,11 +105,9 @@ public class RoverNewLaunchInfoService
 
     private void requestRoverNewLaunchInfo() {
         try {
-            ResponseBody responseBodyRoverList = nasaMarsPhotosAPI.getRoverList().execute().body();
+            RoverListResponse responseBodyRoverList = nasaMarsRoverAPI.getRoverList().execute().body();
             if (responseBodyRoverList != null) {
-                List<Rover> roverList = NASAMarsPhotosAPI.GSON
-                        .fromJson(responseBodyRoverList.string(), RoverListResponse.class)
-                        .getRovers();
+                List<Rover> roverList = responseBodyRoverList.getRovers();
                 for (Rover rover : roverList) {
                     Date lastLaunch = rover.getMaxDate();
                     Date lastRegisteredLaunch = getLastRegisteredLaunch(rover.getName());

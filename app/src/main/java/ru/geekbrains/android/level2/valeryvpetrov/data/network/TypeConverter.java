@@ -12,7 +12,7 @@ import java.util.Locale;
 public class TypeConverter {
     @NonNull
     private static DateFormat dateFormat =
-            new SimpleDateFormat(NASAMarsPhotosAPI.DATE_FORMAT, Locale.US);
+            new SimpleDateFormat(NASAMarsRoversGenerator.DATE_FORMAT, Locale.US);
 
     @Nullable
     public static String dateToString(@Nullable Date date) {

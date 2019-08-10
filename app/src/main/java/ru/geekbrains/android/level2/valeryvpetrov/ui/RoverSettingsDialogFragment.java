@@ -19,25 +19,23 @@ import androidx.annotation.UiThread;
 import androidx.annotation.WorkerThread;
 import androidx.fragment.app.DialogFragment;
 
-import java.io.IOException;
 import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 import pl.droidsonroids.gif.GifImageView;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoverAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoversGenerator;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverListResponse;
 
 @UiThread
 public class RoverSettingsDialogFragment
-        extends DialogFragment
-        implements Callback {
+        extends DialogFragment {
 
     static final String TAG = RoverSettingsDialogListener.class.getName();
 
@@ -54,23 +52,57 @@ public class RoverSettingsDialogFragment
     private Handler handlerUI;
 
     @NonNull
-    private NASAMarsPhotosAPI nasaMarsPhotosAPI;
+    private NASAMarsRoverAPI nasaMarsRoverAPI;
+    private Callback<RoverListResponse> roverListResponseCallback;
+
     private List<Rover> roverList;                  // list of all available rovers
 
     private Rover chosenRover;              // rover user want ot observe
     @Nullable
     private String chosenRoverName;             // previously chosen rover name
 
-    @BindView(R.id.radio_group_rover_names)             RadioGroup radioGroupRoverNames;
-    @BindView(R.id.progress_rover_names)                GifImageView viewProgressRoverNames;
+    @BindView(R.id.radio_group_rover_names)
+    RadioGroup radioGroupRoverNames;
+    @BindView(R.id.progress_rover_names)
+    GifImageView viewProgressRoverNames;
 
-    RoverSettingsDialogFragment(@NonNull NASAMarsPhotosAPI nasaMarsPhotosAPI) {
-        this.nasaMarsPhotosAPI = nasaMarsPhotosAPI;
+    public RoverSettingsDialogFragment() {
+        nasaMarsRoverAPI = NASAMarsRoversGenerator.createService(NASAMarsRoverAPI.class);
+        roverListResponseCallback = new Callback<RoverListResponse>() {
+            @WorkerThread
+            @Override
+            public void onResponse(@NonNull Call<RoverListResponse> call,
+                                   @NonNull Response<RoverListResponse> response) {
+                if (response.body() != null) {
+                    roverList = response.body().getRovers();
+                    if (roverList != null) {
+                        handlerUI.post(() -> {
+                            viewProgressRoverNames.setVisibility(View.GONE);
+                            inflateRoverNames(roverList);
+                        });
+                    }
+                }
+            }
+
+            @WorkerThread
+            @Override
+            public void onFailure(@NonNull Call<RoverListResponse> call,
+                                  @NonNull Throwable t) {
+                handlerUI.post(() -> {
+                    Activity activity = getActivity();
+                    if (activity != null) {
+                        Toast.makeText(activity,
+                                activity.getString(R.string.error_network_failure),
+                                Toast.LENGTH_LONG).show();
+                        listener.onCancelClick();
+                    }
+                });
+            }
+        };
     }
 
-    RoverSettingsDialogFragment(@NonNull NASAMarsPhotosAPI nasaMarsPhotosAPI,
-                                @NonNull String chosenRoverName) {
-        this(nasaMarsPhotosAPI);
+    RoverSettingsDialogFragment(@NonNull String chosenRoverName) {
+        this();
         this.chosenRoverName = chosenRoverName;
     }
 
@@ -115,39 +147,7 @@ public class RoverSettingsDialogFragment
 
     private void loadRoverList() {
         viewProgressRoverNames.setVisibility(View.VISIBLE);
-        nasaMarsPhotosAPI.getRoverList().enqueue(this);
-    }
-
-    @WorkerThread
-    @Override
-    public void onFailure(@NonNull Call call, @NonNull IOException e) {
-        handlerUI.post(() -> {
-            Activity activity = getActivity();
-            if (activity != null) {
-                Toast.makeText(activity,
-                        activity.getString(R.string.error_network_failure),
-                        Toast.LENGTH_LONG).show();
-                listener.onCancelClick();
-            }
-        });
-    }
-
-    @WorkerThread
-    @Override
-    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-        ResponseBody responseBody = response.body();
-        if (responseBody != null) {
-            String responseBodyString = responseBody.string();
-            roverList = NASAMarsPhotosAPI.GSON
-                    .fromJson(responseBodyString, RoverListResponse.class)
-                    .getRovers();
-            if (roverList != null) {
-                handlerUI.post(() -> {
-                    viewProgressRoverNames.setVisibility(View.GONE);
-                    inflateRoverNames(roverList);
-                });
-            }
-        }
+        nasaMarsRoverAPI.getRoverList().enqueue(roverListResponseCallback);
     }
 
     private void inflateRoverNames(@NonNull List<Rover> roverList) {

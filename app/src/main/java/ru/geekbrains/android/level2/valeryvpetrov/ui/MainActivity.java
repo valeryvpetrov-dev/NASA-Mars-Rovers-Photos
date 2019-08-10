@@ -18,6 +18,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
+import androidx.annotation.WorkerThread;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
@@ -25,20 +26,19 @@ import androidx.fragment.app.DialogFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 import pl.droidsonroids.gif.GifImageView;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsPhotosAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoverPhotoAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoversGenerator;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverPhotoListResponse;
@@ -64,24 +64,35 @@ public class MainActivity
 
     private Handler handlerUI;
 
-    private NASAMarsPhotosAPI nasaMarsPhotosAPI;
+    private NASAMarsRoverPhotoAPI nasaMarsRoverPhotoAPI;
+    private Callback<RoverPhotoListResponse> roverPhotoListResponseCallback;
 
     // application bar functionality
-    @BindView(R.id.toolbar)                     Toolbar toolbar;
-    @BindView(R.id.text_view_name)              TextView textViewRoverName;
-    @BindView(R.id.text_view_landing_date)      TextView textViewLandingDate;
-    @BindView(R.id.text_view_launch_date)       TextView textViewLaunchDate;
-    @BindView(R.id.text_view_status)            TextView textViewStatus;
-    @BindView(R.id.text_view_max_sol)           TextView textViewMaxSol;
-    @BindView(R.id.text_view_max_date)          TextView textViewMaxDate;
-    @BindView(R.id.text_view_total_photos)      TextView textViewTotalPhotos;
+    @BindView(R.id.toolbar)
+    Toolbar toolbar;
+    @BindView(R.id.text_view_name)
+    TextView textViewRoverName;
+    @BindView(R.id.text_view_landing_date)
+    TextView textViewLandingDate;
+    @BindView(R.id.text_view_launch_date)
+    TextView textViewLaunchDate;
+    @BindView(R.id.text_view_status)
+    TextView textViewStatus;
+    @BindView(R.id.text_view_max_sol)
+    TextView textViewMaxSol;
+    @BindView(R.id.text_view_max_date)
+    TextView textViewMaxDate;
+    @BindView(R.id.text_view_total_photos)
+    TextView textViewTotalPhotos;
 
     // search functionality
     SearchView searchViewPhotos;
 
     // photos recycler view functionality
-    @BindView(R.id.progress_photos)             GifImageView viewProgressPhotos;
-    @BindView(R.id.recycler_view_photos)        RecyclerView recyclerViewPhotos;
+    @BindView(R.id.progress_photos)
+    GifImageView viewProgressPhotos;
+    @BindView(R.id.recycler_view_photos)
+    RecyclerView recyclerViewPhotos;
     private PhotoAdapter adapterPhotos;
     @Nullable
     private List<Photo> photoList;
@@ -104,7 +115,34 @@ public class MainActivity
 
         handlerUI = new Handler(Looper.getMainLooper());
 
-        nasaMarsPhotosAPI = NASAMarsPhotosAPI.getInstance();
+        nasaMarsRoverPhotoAPI = NASAMarsRoversGenerator.createService(NASAMarsRoverPhotoAPI.class);
+        roverPhotoListResponseCallback = new Callback<RoverPhotoListResponse>() {
+            @WorkerThread
+            @Override
+            public void onResponse(@NonNull Call<RoverPhotoListResponse> call,
+                                   @NonNull Response<RoverPhotoListResponse> response) {
+                if (response.body() != null) {
+                    photoList = response.body().getPhotos();
+                    if (photoList != null) {
+                        handlerUI.post(() -> {
+                            viewProgressPhotos.setVisibility(View.GONE);
+                            adapterPhotos.updatePhotoList(photoList);
+                        });
+                    }
+                }
+            }
+
+            @WorkerThread
+            @Override
+            public void onFailure(@NonNull Call<RoverPhotoListResponse> call,
+                                  @NonNull Throwable t) {
+                handlerUI.post(() -> {
+                    viewProgressPhotos.setVisibility(View.GONE);
+                    showToast(getString(R.string.error_network_failure));
+                });
+            }
+        };
+
         initUI();
         configureActionBar();
 
@@ -171,9 +209,9 @@ public class MainActivity
     private void showRoverSettingsDialog() {
         Rover chosenRover = loadRoverFromPreferences();
         if (chosenRover != null) {
-            roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI, chosenRover.getName());
+            roverSettingsDialogFragment = new RoverSettingsDialogFragment(chosenRover.getName());
         } else {
-            roverSettingsDialogFragment = new RoverSettingsDialogFragment(nasaMarsPhotosAPI);
+            roverSettingsDialogFragment = new RoverSettingsDialogFragment();
         }
         roverSettingsDialogFragment.show(getSupportFragmentManager(), RoverSettingsDialogFragment.TAG);
     }
@@ -187,34 +225,9 @@ public class MainActivity
                 int sol = Integer.valueOf(query.trim());
                 if (sol >= 0 && sol <= roverPreferences.getMaxSol()) {   // sol relates to rover settings
                     viewProgressPhotos.setVisibility(View.VISIBLE);
-                    nasaMarsPhotosAPI
-                            .getPhotosFromRoverBySol(roverPreferences.getName(), sol, 1)
-                            .enqueue(new Callback() {
-                                @Override
-                                public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                                    handlerUI.post(() -> {
-                                        viewProgressPhotos.setVisibility(View.GONE);
-                                        showToast(getString(R.string.error_network_failure));
-                                    });
-                                }
-
-                                @Override
-                                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                                    ResponseBody responseBody = response.body();
-                                    if (responseBody != null) {
-                                        String responseBodyString = responseBody.string();
-                                        photoList = NASAMarsPhotosAPI.GSON
-                                                .fromJson(responseBodyString, RoverPhotoListResponse.class)
-                                                .getPhotos();
-                                        if (photoList != null) {
-                                            handlerUI.post(() -> {
-                                                viewProgressPhotos.setVisibility(View.GONE);
-                                                adapterPhotos.updatePhotoList(photoList);
-                                            });
-                                        }
-                                    }
-                                }
-                            });
+                    nasaMarsRoverPhotoAPI
+                            .getPhotoList(roverPreferences.getName(), sol, 1)
+                            .enqueue(roverPhotoListResponseCallback);
                     return true;
                 } else {
                     showToast(getString(R.string.error_invalid_sol));
