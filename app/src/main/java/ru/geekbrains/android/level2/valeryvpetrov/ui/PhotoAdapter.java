@@ -31,7 +31,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     @NonNull
     private List<Photo> photoList;
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    class ViewHolder extends RecyclerView.ViewHolder {
         @BindView(R.id.image_view_photo)                ImageView imageViewPhoto;
         @BindView(R.id.text_view_camera_name)           TextView textViewCameraName;
         @BindView(R.id.text_view_shot_earth_date)       TextView textViewEarthDate;
@@ -42,17 +42,21 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         }
 
         void bind(@NonNull Photo photo) {
-            Glide.with(itemView.getContext())
-                    .load(photo.getImgSrc())
-                    .thumbnail(Glide.with(itemView.getContext()).load(R.drawable.loading))
-                    .into(imageViewPhoto);
-
+            loadImage(photo.getImgSrc());
             textViewCameraName.setText(photo.getCamera().getFullName());
             textViewEarthDate.setText(dateToString(photo.getEarthDate()));
         }
 
+        private void loadImage(String imgSrc) {
+            Glide.with(itemView.getContext())   // item view lifecycle aware
+                    .load(imgSrc)
+                    .thumbnail(Glide.with(itemView.getContext())
+                            .load(R.drawable.loading))
+                    .into(imageViewPhoto);
+        }
+
         @OnClick(R.id.image_view_photo)
-        public void onPhotoClick() {
+        void onPhotoClick() {
             showImageDialog();
         }
 
