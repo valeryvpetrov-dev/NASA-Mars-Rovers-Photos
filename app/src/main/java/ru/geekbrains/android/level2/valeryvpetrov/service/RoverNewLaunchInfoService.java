@@ -6,8 +6,12 @@ import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.Build;
+import android.os.Handler;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -20,7 +24,6 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 import ru.geekbrains.android.level2.valeryvpetrov.R;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoverAPI;
@@ -28,10 +31,8 @@ import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoversGen
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverListResponse;
 import ru.geekbrains.android.level2.valeryvpetrov.receiver.ConnectivityChangeReceiver;
-import ru.geekbrains.android.level2.valeryvpetrov.receiver.RoverNewLaunchInfoAlarmReceiver;
 import ru.geekbrains.android.level2.valeryvpetrov.ui.MainActivity;
 
-import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_KEY_FLAG_IS_WAITING_CONNECTIVITY_CHANGE;
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_KEY_ROVER_LAST_REGISTERED_LAUNCH_FORMAT;
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_NAME;
 import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.dateToString;
@@ -50,8 +51,9 @@ public class RoverNewLaunchInfoService
     private int notificationId = 1;
 
     private NASAMarsRoverAPI nasaMarsRoverAPI;
-
-    private boolean isWaitingForConnectivityChange;  // flag that indicates connectivity loss
+    private ConnectivityChangeReceiver connectivityChangeReceiver;          // used versions less than N
+    private ConnectivityChangeReceiver.NetworkCallback networkCallbackLTN;  // used versions less than N
+    private ConnectivityManager.NetworkCallback networkCallbackGTEN;        // used versions and greater then or equal N
 
     public static void enqueueWork(Context context, Intent intent) {
         enqueueWork(context, RoverNewLaunchInfoService.class, jobId, intent);
@@ -60,9 +62,26 @@ public class RoverNewLaunchInfoService
     @Override
     public void onCreate() {
         nasaMarsRoverAPI = NASAMarsRoversGenerator.createService(NASAMarsRoverAPI.class);
-        isWaitingForConnectivityChange = getFlag(SHARED_PREFERENCES_KEY_FLAG_IS_WAITING_CONNECTIVITY_CHANGE);
+        networkCallbackGTEN = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                Log.d(LOG_TAG, "onAvailable()");
+                requestRoverNewLaunchInfo();
+                super.onAvailable(network);
+            }
+        };
+        networkCallbackLTN = () -> {
+            Log.d(LOG_TAG, "onAvailable()");
+            requestRoverNewLaunchInfo();
+        };
         createNotificationChannel();
         super.onCreate();
+    }
+
+    @Override
+    public void onDestroy() {
+        unregisterConnectivityChangeReceiver();
+        super.onDestroy();
     }
 
     /***
@@ -72,34 +91,41 @@ public class RoverNewLaunchInfoService
      * - Runs in worker thread (network request is done synchronously)
      * - Each incoming intent is handled sequentially (intents are handled separately)
      *
-     * Can be triggered by:
-     * - RoverNewLaunchInfoAlarmReceiver
-     * - ConnectivityChangeReceiver
-     *
      * @param intent - work initiator.
      */
     @Override
     protected void onHandleWork(@NonNull Intent intent) {
-        String action = intent.getAction();
-        if (Objects.equals(action, RoverNewLaunchInfoAlarmReceiver.INTENT_ACTION)) {
-            handleAlarmReceiverIntent(intent);
-        } else if (Objects.equals(action, ConnectivityChangeReceiver.INTENT_ACTION)) {
-            handleConnectivityChangeReceiverIntent(intent);
+        registerConnectivityChangeReceiver();
+    }
+
+    private void registerConnectivityChangeReceiver() {
+        // https://developer.android.com/about/versions/nougat/android-7.0-changes.html
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            ConnectivityManager connectivityManager =
+                    (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null)
+                // https://developer.android.com/reference/android/net/ConnectivityManager.html#registerDefaultNetworkCallback
+                connectivityManager.registerDefaultNetworkCallback(networkCallbackGTEN);
+        } else {
+            IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+            connectivityChangeReceiver = new ConnectivityChangeReceiver(networkCallbackLTN);
+            Handler serviceHandle = new Handler();  // binds to service thread
+            // https://developer.android.com/reference/android/content/Context#registerReceiver(android.content.BroadcastReceiver,%2520android.content.IntentFilter,%2520java.lang.String,%2520android.os.Handler)
+            registerReceiver(connectivityChangeReceiver, filter, null, serviceHandle);
         }
     }
 
-    private void handleAlarmReceiverIntent(@NonNull Intent intent) {
-        if (!isWaitingForConnectivityChange)
-            requestRoverNewLaunchInfo();
-    }
-
-    private void handleConnectivityChangeReceiverIntent(@NonNull Intent intent) {
-        if (isWaitingForConnectivityChange) {
-            boolean isNetworkAvailable = intent
-                    .getBooleanExtra(ConnectivityChangeReceiver.EXTRA_IS_NETWORK_AVAILABLE,
-                            false);
-            if (isNetworkAvailable)
-                requestRoverNewLaunchInfo();
+    private void unregisterConnectivityChangeReceiver() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (networkCallbackGTEN != null) {
+                ConnectivityManager connectivityManager =
+                        (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                if (connectivityManager != null)
+                    connectivityManager.unregisterNetworkCallback(networkCallbackGTEN);
+            }
+        } else {
+            if (connectivityChangeReceiver != null)
+                unregisterReceiver(connectivityChangeReceiver);
         }
     }
 
@@ -123,12 +149,8 @@ public class RoverNewLaunchInfoService
                 }
                 Log.d(LOG_TAG, String.format("onHandleWork(). Rover list size: %d", roverList.size()));
             }
-            setFlag(SHARED_PREFERENCES_KEY_FLAG_IS_WAITING_CONNECTIVITY_CHANGE, false);
         } catch (IOException e) {
             Log.d(LOG_TAG, String.format("onHandleWork(). IOException: %s", e.getMessage()));
-            if (!ConnectivityChangeReceiver.isNetworkAvailable(this)) {
-                setFlag(SHARED_PREFERENCES_KEY_FLAG_IS_WAITING_CONNECTIVITY_CHANGE, true);
-            }
         }
     }
 
@@ -153,20 +175,6 @@ public class RoverNewLaunchInfoService
         String key = String
                 .format(SHARED_PREFERENCES_KEY_ROVER_LAST_REGISTERED_LAUNCH_FORMAT, rover.getName());
         editor.putString(key, dateToString(rover.getMaxDate()));
-        editor.apply();
-    }
-
-    private boolean getFlag(@NonNull String flagKey) {
-        // data persistence between service work sessions
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
-        return sharedPreferences.getBoolean(flagKey, false);
-    }
-
-    private void setFlag(@NonNull String flagKey, boolean flag) {
-        // data persistence between service work sessions
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putBoolean(flagKey, flag);
         editor.apply();
     }
 

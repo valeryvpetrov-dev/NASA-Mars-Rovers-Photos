@@ -42,7 +42,6 @@ import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoversGen
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
 import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverPhotoListResponse;
-import ru.geekbrains.android.level2.valeryvpetrov.receiver.RoverNewLaunchInfoAlarmReceiver;
 import ru.geekbrains.android.level2.valeryvpetrov.service.RoverNewLaunchInfoService;
 
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_KEY_ROVER_ID;
@@ -155,7 +154,12 @@ public class MainActivity
                 showRoverSettingsDialog();
             }
         }
-        RoverNewLaunchInfoAlarmReceiver.scheduleAlarmReceiver(getApplicationContext(), this);
+        enqueueRoverNewLaunchInfoService();
+    }
+
+    private void enqueueRoverNewLaunchInfoService() {
+        Intent roverNewLaunchInfoService = new Intent(this, RoverNewLaunchInfoService.class);
+        RoverNewLaunchInfoService.enqueueWork(this, roverNewLaunchInfoService);
     }
 
     private void initUI() {
