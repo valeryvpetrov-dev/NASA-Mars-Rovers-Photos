@@ -172,7 +172,6 @@ public class MainActivity
 
     private void handleLaunchIntent(@Nullable Intent intent) {
         if (intent != null) {
-            // TODO RETURNS SAME ROVER INSTANCE FOR EACH NOTIFICATION
             newLaunchRover = intent.getParcelableExtra(RoverNewLaunchInfoService.EXTRA_NEW_LAUNCH_ROVER);
         }
     }

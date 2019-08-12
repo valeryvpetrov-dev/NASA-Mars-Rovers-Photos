@@ -185,7 +185,7 @@ public class RoverNewLaunchInfoService
         TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(this);
         taskStackBuilder.addNextIntent(newLaunchInfo);
         PendingIntent pendingIntentLoadLatestPhotos = taskStackBuilder
-                .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+                .getPendingIntent(notificationId, PendingIntent.FLAG_UPDATE_CURRENT);
 
         String contentTitle = String.format("%s rover new launch info.",
                 rover.getName());
