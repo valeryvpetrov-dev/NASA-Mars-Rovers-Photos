@@ -67,21 +67,17 @@ public class RoverNewLaunchInfoService
             public void onAvailable(@NonNull Network network) {
                 Log.d(LOG_TAG, "onAvailable()");
                 requestRoverNewLaunchInfo();
+                unregisterConnectivityChangeReceiver();
                 super.onAvailable(network);
             }
         };
         networkCallbackLTN = () -> {
             Log.d(LOG_TAG, "onAvailable()");
             requestRoverNewLaunchInfo();
+            unregisterConnectivityChangeReceiver();
         };
         createNotificationChannel();
         super.onCreate();
-    }
-
-    @Override
-    public void onDestroy() {
-        unregisterConnectivityChangeReceiver();
-        super.onDestroy();
     }
 
     /***
