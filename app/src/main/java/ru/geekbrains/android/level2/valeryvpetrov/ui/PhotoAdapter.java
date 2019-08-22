@@ -21,9 +21,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.Photo;
 
-import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.dateToString;
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.TypeConverter.dateToString;
 
 @UiThread
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> {
@@ -32,9 +32,12 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     private List<Photo> photoList;
 
     class ViewHolder extends RecyclerView.ViewHolder {
-        @BindView(R.id.image_view_photo)                ImageView imageViewPhoto;
-        @BindView(R.id.text_view_camera_name)           TextView textViewCameraName;
-        @BindView(R.id.text_view_shot_earth_date)       TextView textViewEarthDate;
+        @BindView(R.id.image_view_photo)
+        ImageView imageViewPhoto;
+        @BindView(R.id.text_view_camera_name)
+        TextView textViewCameraName;
+        @BindView(R.id.text_view_shot_earth_date)
+        TextView textViewEarthDate;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);

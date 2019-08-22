@@ -1,10 +1,14 @@
 package ru.geekbrains.android.level2.valeryvpetrov.receiver;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
+import android.os.Handler;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -12,6 +16,8 @@ import androidx.annotation.NonNull;
 public class ConnectivityChangeReceiver extends BroadcastReceiver {
 
     private static final String LOG_TAG = ConnectivityChangeReceiver.class.getSimpleName();
+
+    private static ConnectivityChangeReceiver connectivityChangeReceiver;          // used versions less than N
 
     private NetworkCallback networkCallback;
 
@@ -28,7 +34,7 @@ public class ConnectivityChangeReceiver extends BroadcastReceiver {
      * - Runs on thread that registered receiver
      *
      * @param context: execution context
-     * @param intent: execution initiator
+     * @param intent:  execution initiator
      */
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -47,6 +53,38 @@ public class ConnectivityChangeReceiver extends BroadcastReceiver {
             return isNetworkAvailable;
         } else
             return false;
+    }
+
+    public static void registerConnectivityChangeReceiver(@NonNull Context context,
+                                                          @NonNull ConnectivityManager.NetworkCallback networkCallbackGTEN,
+                                                          @NonNull NetworkCallback networkCallbackLTN) {
+        // https://developer.android.com/about/versions/nougat/android-7.0-changes.html
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            ConnectivityManager connectivityManager =
+                    (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null)
+                // https://developer.android.com/reference/android/net/ConnectivityManager.html#registerDefaultNetworkCallback
+                connectivityManager.registerDefaultNetworkCallback(networkCallbackGTEN);
+        } else {
+            IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+            connectivityChangeReceiver = new ConnectivityChangeReceiver(networkCallbackLTN);
+            Handler serviceHandle = new Handler();  // binds to service thread
+            // https://developer.android.com/reference/android/content/Context#registerReceiver(android.content.BroadcastReceiver,%2520android.content.IntentFilter,%2520java.lang.String,%2520android.os.Handler)
+            context.registerReceiver(connectivityChangeReceiver, filter, null, serviceHandle);
+        }
+    }
+
+    public static void unregisterConnectivityChangeReceiver(@NonNull Context context,
+                                                            @NonNull ConnectivityManager.NetworkCallback networkCallbackGTEN) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            ConnectivityManager connectivityManager =
+                    (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null)
+                connectivityManager.unregisterNetworkCallback(networkCallbackGTEN);
+        } else {
+            if (connectivityChangeReceiver != null)
+                context.unregisterReceiver(connectivityChangeReceiver);
+        }
     }
 
 }

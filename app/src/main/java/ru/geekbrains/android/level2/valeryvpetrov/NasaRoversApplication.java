@@ -16,6 +16,7 @@ public class NasaRoversApplication extends Application {
 
     public static final String SHARED_PREFERENCES_KEY_ROVER_LAST_REGISTERED_LAUNCH_FORMAT = "%sLastRegisteredLaunch";
 
-    public static final String SHARED_PREFERENCES_KEY_FLAG_IS_WAITING_CONNECTIVITY_CHANGE = "isWaitingConnectivityChange";
+    public static final String SHARED_PREFERENCES_KEY_ROVER_LANDING_LAT = "%sLandingLat";
+    public static final String SHARED_PREFERENCES_KEY_ROVER_LANDING_LNG = "%sLandingLng";
 
 }

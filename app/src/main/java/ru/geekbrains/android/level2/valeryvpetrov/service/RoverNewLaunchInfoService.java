@@ -6,12 +6,10 @@ import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.os.Build;
-import android.os.Handler;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -26,17 +24,17 @@ import java.util.Date;
 import java.util.List;
 
 import ru.geekbrains.android.level2.valeryvpetrov.R;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoverAPI;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoversGenerator;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverListResponse;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.NASAMarsRoverAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.NASAMarsRoversGenerator;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.Rover;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.RoverListResponse;
 import ru.geekbrains.android.level2.valeryvpetrov.receiver.ConnectivityChangeReceiver;
 import ru.geekbrains.android.level2.valeryvpetrov.ui.MainActivity;
 
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_KEY_ROVER_LAST_REGISTERED_LAUNCH_FORMAT;
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_NAME;
-import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.dateToString;
-import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.stringToDate;
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.TypeConverter.dateToString;
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.TypeConverter.stringToDate;
 
 @WorkerThread
 public class RoverNewLaunchInfoService
@@ -51,7 +49,6 @@ public class RoverNewLaunchInfoService
     private int notificationId = 1;
 
     private NASAMarsRoverAPI nasaMarsRoverAPI;
-    private ConnectivityChangeReceiver connectivityChangeReceiver;          // used versions less than N
     private ConnectivityChangeReceiver.NetworkCallback networkCallbackLTN;  // used versions less than N
     private ConnectivityManager.NetworkCallback networkCallbackGTEN;        // used versions and greater then or equal N
 
@@ -61,20 +58,26 @@ public class RoverNewLaunchInfoService
 
     @Override
     public void onCreate() {
-        nasaMarsRoverAPI = NASAMarsRoversGenerator.createService(NASAMarsRoverAPI.class);
+        nasaMarsRoverAPI = NASAMarsRoversGenerator.getInstance()
+                .createService(NASAMarsRoverAPI.class);
         networkCallbackGTEN = new ConnectivityManager.NetworkCallback() {
+            @WorkerThread
             @Override
             public void onAvailable(@NonNull Network network) {
                 Log.d(LOG_TAG, "onAvailable()");
                 requestRoverNewLaunchInfo();
-                unregisterConnectivityChangeReceiver();
+                ConnectivityChangeReceiver
+                        .unregisterConnectivityChangeReceiver(RoverNewLaunchInfoService.this,
+                                networkCallbackGTEN);
                 super.onAvailable(network);
             }
         };
         networkCallbackLTN = () -> {
             Log.d(LOG_TAG, "onAvailable()");
             requestRoverNewLaunchInfo();
-            unregisterConnectivityChangeReceiver();
+            ConnectivityChangeReceiver
+                    .unregisterConnectivityChangeReceiver(RoverNewLaunchInfoService.this,
+                            networkCallbackGTEN);
         };
         createNotificationChannel();
         super.onCreate();
@@ -91,38 +94,8 @@ public class RoverNewLaunchInfoService
      */
     @Override
     protected void onHandleWork(@NonNull Intent intent) {
-        registerConnectivityChangeReceiver();
-    }
-
-    private void registerConnectivityChangeReceiver() {
-        // https://developer.android.com/about/versions/nougat/android-7.0-changes.html
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            ConnectivityManager connectivityManager =
-                    (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager != null)
-                // https://developer.android.com/reference/android/net/ConnectivityManager.html#registerDefaultNetworkCallback
-                connectivityManager.registerDefaultNetworkCallback(networkCallbackGTEN);
-        } else {
-            IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-            connectivityChangeReceiver = new ConnectivityChangeReceiver(networkCallbackLTN);
-            Handler serviceHandle = new Handler();  // binds to service thread
-            // https://developer.android.com/reference/android/content/Context#registerReceiver(android.content.BroadcastReceiver,%2520android.content.IntentFilter,%2520java.lang.String,%2520android.os.Handler)
-            registerReceiver(connectivityChangeReceiver, filter, null, serviceHandle);
-        }
-    }
-
-    private void unregisterConnectivityChangeReceiver() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            if (networkCallbackGTEN != null) {
-                ConnectivityManager connectivityManager =
-                        (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                if (connectivityManager != null)
-                    connectivityManager.unregisterNetworkCallback(networkCallbackGTEN);
-            }
-        } else {
-            if (connectivityChangeReceiver != null)
-                unregisterReceiver(connectivityChangeReceiver);
-        }
+        ConnectivityChangeReceiver.registerConnectivityChangeReceiver(this,
+                networkCallbackGTEN, networkCallbackLTN);
     }
 
     private void requestRoverNewLaunchInfo() {

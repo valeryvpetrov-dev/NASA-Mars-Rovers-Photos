@@ -13,10 +13,10 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
-import androidx.annotation.WorkerThread;
 import androidx.fragment.app.DialogFragment;
 
 import java.util.List;
@@ -28,16 +28,16 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoverAPI;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoversGenerator;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverListResponse;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.NASAMarsRoverAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.NASAMarsRoversGenerator;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.Rover;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.RoverListResponse;
 
 @UiThread
 public class RoverSettingsDialogFragment
         extends DialogFragment {
 
-    static final String TAG = RoverSettingsDialogListener.class.getName();
+    static final String TAG = RoverSettingsDialogFragment.class.getName();
 
     public interface RoverSettingsDialogListener {
 
@@ -66,10 +66,12 @@ public class RoverSettingsDialogFragment
     @BindView(R.id.progress_rover_names)
     GifImageView viewProgressRoverNames;
 
-    public RoverSettingsDialogFragment() {
-        nasaMarsRoverAPI = NASAMarsRoversGenerator.createService(NASAMarsRoverAPI.class);
+    RoverSettingsDialogFragment(@NonNull RoverSettingsDialogListener listener) {
+        this.listener = listener;
+        nasaMarsRoverAPI = NASAMarsRoversGenerator.getInstance()
+                .createService(NASAMarsRoverAPI.class);
         roverListResponseCallback = new Callback<RoverListResponse>() {
-            @WorkerThread
+            @MainThread
             @Override
             public void onResponse(@NonNull Call<RoverListResponse> call,
                                    @NonNull Response<RoverListResponse> response) {
@@ -84,7 +86,7 @@ public class RoverSettingsDialogFragment
                 }
             }
 
-            @WorkerThread
+            @MainThread
             @Override
             public void onFailure(@NonNull Call<RoverListResponse> call,
                                   @NonNull Throwable t) {
@@ -101,15 +103,15 @@ public class RoverSettingsDialogFragment
         };
     }
 
-    RoverSettingsDialogFragment(@NonNull String chosenRoverName) {
-        this();
+    RoverSettingsDialogFragment(@NonNull RoverSettingsDialogListener listener,
+                                @NonNull String chosenRoverName) {
+        this(listener);
         this.chosenRoverName = chosenRoverName;
     }
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        listener = (RoverSettingsDialogListener) getActivity();
         handlerUI = new Handler(Looper.getMainLooper());
     }
 

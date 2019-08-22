@@ -37,11 +37,11 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import ru.geekbrains.android.level2.valeryvpetrov.R;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoverPhotoAPI;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.NASAMarsRoversGenerator;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Photo;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.Rover;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverPhotoListResponse;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.NASAMarsRoverPhotoAPI;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.NASAMarsRoversGenerator;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.Photo;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.Rover;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.RoverPhotoListResponse;
 import ru.geekbrains.android.level2.valeryvpetrov.service.RoverNewLaunchInfoService;
 
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_KEY_ROVER_ID;
@@ -53,8 +53,8 @@ import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.S
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_KEY_ROVER_STATUS;
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_KEY_ROVER_TOTAL_PHOTOS;
 import static ru.geekbrains.android.level2.valeryvpetrov.NasaRoversApplication.SHARED_PREFERENCES_NAME;
-import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.dateToString;
-import static ru.geekbrains.android.level2.valeryvpetrov.data.network.TypeConverter.stringToDate;
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.TypeConverter.dateToString;
+import static ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.TypeConverter.stringToDate;
 
 @UiThread
 public class MainActivity
@@ -114,7 +114,8 @@ public class MainActivity
 
         handlerUI = new Handler(Looper.getMainLooper());
 
-        nasaMarsRoverPhotoAPI = NASAMarsRoversGenerator.createService(NASAMarsRoverPhotoAPI.class);
+        nasaMarsRoverPhotoAPI = NASAMarsRoversGenerator.getInstance()
+                .createService(NASAMarsRoverPhotoAPI.class);
         roverPhotoListResponseCallback = new Callback<RoverPhotoListResponse>() {
             @WorkerThread
             @Override
@@ -206,17 +207,29 @@ public class MainActivity
             showRoverSettingsDialog();
             return true;
         }
+        if (item.getItemId() == R.id.action_map) {
+            showRoverMap();
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
 
     private void showRoverSettingsDialog() {
         Rover chosenRover = loadRoverFromPreferences();
         if (chosenRover != null) {
-            roverSettingsDialogFragment = new RoverSettingsDialogFragment(chosenRover.getName());
+            roverSettingsDialogFragment = new RoverSettingsDialogFragment(this, chosenRover.getName());
         } else {
-            roverSettingsDialogFragment = new RoverSettingsDialogFragment();
+            roverSettingsDialogFragment = new RoverSettingsDialogFragment(this);
         }
         roverSettingsDialogFragment.show(getSupportFragmentManager(), RoverSettingsDialogFragment.TAG);
+    }
+
+    private void showRoverMap() {
+        Rover chosenRover = loadRoverFromPreferences();
+        if (chosenRover != null) {
+            DialogFragment roverMapDialogFragment = new RoverMapDialogFragment(chosenRover.getName());
+            roverMapDialogFragment.show(getSupportFragmentManager(), RoverMapDialogFragment.TAG);
+        }
     }
 
     @Override

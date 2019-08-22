@@ -1,11 +1,10 @@
-package ru.geekbrains.android.level2.valeryvpetrov.data.network.model;
+package ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model;
 
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.google.gson.annotations.SerializedName;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 

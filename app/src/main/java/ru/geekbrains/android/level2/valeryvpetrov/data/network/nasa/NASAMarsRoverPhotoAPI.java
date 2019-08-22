@@ -1,4 +1,4 @@
-package ru.geekbrains.android.level2.valeryvpetrov.data.network;
+package ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
@@ -7,7 +7,7 @@ import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
-import ru.geekbrains.android.level2.valeryvpetrov.data.network.model.RoverPhotoListResponse;
+import ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa.model.RoverPhotoListResponse;
 
 public interface NASAMarsRoverPhotoAPI {
 

@@ -1,4 +1,4 @@
-package ru.geekbrains.android.level2.valeryvpetrov.data.network;
+package ru.geekbrains.android.level2.valeryvpetrov.data.network.nasa;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

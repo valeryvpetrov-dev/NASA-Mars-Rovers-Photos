@@ -41,6 +41,8 @@ dependencies {
     implementation 'com.github.chrisbanes:PhotoView:2.0.0'
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.17'
     implementation 'com.jakewharton:butterknife:10.1.0'
+    implementation 'com.google.android.gms:play-services-maps:17.0.0'
+
     compileOnly 'org.projectlombok:lombok:1.18.8'
 
     annotationProcessor 'com.github.bumptech.glide:compiler:4.9.0'
