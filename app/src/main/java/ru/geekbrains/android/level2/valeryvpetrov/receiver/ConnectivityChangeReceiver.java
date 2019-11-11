@@ -1,6 +1,5 @@
 package ru.geekbrains.android.level2.valeryvpetrov.receiver;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -20,6 +19,8 @@ public class ConnectivityChangeReceiver extends BroadcastReceiver {
     private static ConnectivityChangeReceiver connectivityChangeReceiver;          // used versions less than N
 
     private NetworkCallback networkCallback;
+
+    private static boolean isRegistered;
 
     public interface NetworkCallback {
         void onAvailable();
@@ -62,15 +63,18 @@ public class ConnectivityChangeReceiver extends BroadcastReceiver {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             ConnectivityManager connectivityManager =
                     (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager != null)
+            if (connectivityManager != null) {
                 // https://developer.android.com/reference/android/net/ConnectivityManager.html#registerDefaultNetworkCallback
                 connectivityManager.registerDefaultNetworkCallback(networkCallbackGTEN);
+                isRegistered = true;
+            }
         } else {
             IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
             connectivityChangeReceiver = new ConnectivityChangeReceiver(networkCallbackLTN);
             Handler serviceHandle = new Handler();  // binds to service thread
             // https://developer.android.com/reference/android/content/Context#registerReceiver(android.content.BroadcastReceiver,%2520android.content.IntentFilter,%2520java.lang.String,%2520android.os.Handler)
             context.registerReceiver(connectivityChangeReceiver, filter, null, serviceHandle);
+            isRegistered = true;
         }
     }
 
@@ -79,11 +83,15 @@ public class ConnectivityChangeReceiver extends BroadcastReceiver {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             ConnectivityManager connectivityManager =
                     (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager != null)
+            if (connectivityManager != null && isRegistered) {
                 connectivityManager.unregisterNetworkCallback(networkCallbackGTEN);
+                isRegistered = false;
+            }
         } else {
-            if (connectivityChangeReceiver != null)
+            if (connectivityChangeReceiver != null && isRegistered) {
                 context.unregisterReceiver(connectivityChangeReceiver);
+                isRegistered = false;
+            }
         }
     }
 
